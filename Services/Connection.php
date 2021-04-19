@@ -47,18 +47,24 @@ class Connection
     $query = $this->connect()->prepare($sql);
     $response = null;
 
-    if (!$query->execute($params)) {
+    try {
+      if (!$query->execute($params)) {
+        $error = $query->errorInfo();
+        return array("error" => true, "message" => "Select failure (" . $error[2] . ")");
+      }
+      $response = $query->fetchAll(PDO::FETCH_OBJ);
+
+      if ($query->rowCount() > 0) {
+        return array("error" => false, "data" => $response);
+      } else {
+        return array("error" => true, "message" => "No data");
+      }
+    } catch (PDOException $e) {
       $error = $query->errorInfo();
       return array("error" => true, "message" => "Select failure (" . $error[2] . ")");
+    } finally {
+      $this->__destruct();
     }
-    $response = $query->fetchAll(PDO::FETCH_OBJ);
-
-    if ($query->rowCount() > 0) {
-      return array("error" => false, "data" => $response);
-    } else {
-      return array("error" => true, "message" => "No data");
-    }
-    $this->__destruct();
   }
 
   public function Insert($sql, $params)
@@ -80,9 +86,54 @@ class Connection
     } catch (PDOException $e) {
       $error = $query->errorInfo();
       return array("error" => true, "message" => "Insert failure (" . $error[2] . ")");
+    } finally {
+      $this->__destruct();
     }
 
     return $response;
+  }
+
+  public function Update($sql, $params)
+  {
+    $query = $this->connect()->prepare($sql);
+
+    try {
+      if ($query->execute($params)) {
+        if ($query->rowCount() >= 1) {
+          return array("error" => false, "message" => "Update data success");
+        }
+        return array("error" => true, "message" => "No data to update");
+      }
+      $error = $query->errorInfo();
+      return array("error" => true, "message" => "Update failure (" . $error[2] . ")");
+    } catch (PDOException $e) {
+      $error = $query->errorInfo();
+      return array("error" => true, "message" => "Update failure (" . $error[2] . ")");
+    } finally {
+      $this->__destruct();
+    }
+  }
+
+  public function Delete($sql, $params)
+  {
+    $query = $this->connect()->prepare($sql);
+
+    try {
+      if ($query->execute($params)) {
+        if ($query->rowCount() >= 1) {
+          return array("error" => false, "message" => "Delete success");
+        }
+        return array("error" => true, "message" => "No data to delete");
+      } else {
+        $error = $query->errorInfo();
+        return array("error" => true, "message" => "Delete failure (" . $error[2] . ")");
+      }
+    } catch (PDOException $e) {
+      $error = $query->errorInfo();
+      return array("error" => true, "message" => "Delete failure (" . $error[2] . ")");
+    } finally {
+      $this->__destruct();
+    }
   }
 
   public function disconnect()
